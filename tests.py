@@ -1,13 +1,14 @@
 # tests.py
 from test_framework import TestRunner
 from gestor_memoria_Version2 import GestorMemoria
-from smart_cache import LRUCache
-from base_gestor_Version2 import EventBus, EventoAvanzado, AppConfig
+from memory_utils import LRUCache
+from base_gestor_Version2 import EventBus, AppConfig
+from core_events import EventoAvanzado
 from dependency_container import ServiceContainer
 import logging
 import threading
 import time
-from circuit_breaker import CircuitState
+from reliability_utils import CircuitState
 
 def initialize_services_for_testing():
     """Initializes a lightweight version of services for testing."""
@@ -71,7 +72,7 @@ def test_event_bus_publish_async():
 @runner.test
 def test_thread_safe_queue():
     """Test para la cola thread-safe."""
-    from lockfree import ThreadSafeQueue
+    from reliability_utils import ThreadSafeQueue
     q = ThreadSafeQueue()
     q.put(1)
     q.put(2)
@@ -81,7 +82,7 @@ def test_thread_safe_queue():
 @runner.test
 def test_circuit_breaker_backoff():
     """Test de backoff exponencial en circuit breaker."""
-    from circuit_breaker import CircuitBreaker
+    from reliability_utils import CircuitBreaker
     breaker = CircuitBreaker(failure_threshold=2, timeout=0.1, timeout_factor=2)
     
     def failing_func():

@@ -18,7 +18,7 @@ from gestor_kernel_Version2 import GestorKernel
 from gestor_energia import GestorEnergia
 from gestor_modulos_Version2 import GestorModulos
 from gestor_gui_Version2 import GestorGUI
-from object_pool import EventoAvanzadoPool
+from memory_utils import EventoAvanzadoPool
 
 def initialize_services():
     """Inicializa todos los servicios singleton en el contenedor de dependencias."""

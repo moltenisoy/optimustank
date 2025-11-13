@@ -24,10 +24,8 @@ from watchdog.events import FileSystemEventHandler
 
 # Nuevas importaciones
 from dependency_container import ServiceContainer
-from object_pool import EventoAvanzadoPool
-from weak_ref_managers import GestorRegistry
-from tracing import get_tracer
-from evento_avanzado import EventoAvanzado
+from memory_utils import EventoAvanzadoPool, GestorRegistry
+from core_events import get_tracer, EventoAvanzado
 
 
 # Modelos de Pydantic para la validación de la configuración
