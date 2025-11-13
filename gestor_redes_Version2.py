@@ -4,7 +4,7 @@ Gestor avanzado de redes con optimización TCP/IP, predicción, tuning agresivo,
 QoS, análisis de paquetes y detección de anomalías.
 """
 from base_gestor_Version2 import BaseGestor, Task
-from rate_limiter import rate_limit
+from reliability_utils import rate_limit
 import subprocess
 import psutil
 import socket

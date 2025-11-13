@@ -14,7 +14,7 @@ import threading
 
 from datetime import timedelta
 
-from platform_adapter import PlatformAdapterFactory
+from platform_threading import PlatformAdapterFactory
 
 class GestorDisco(BaseGestor):
     def __init__(self):

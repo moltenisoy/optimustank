@@ -1,18 +1,123 @@
-# smart_cache.py
+# memory_utils.py
 """
-Sistema de caché avanzado con TTL, LRU y warming.
+Utilidades de gestión de memoria y caché para OPTIMUSTANK.
+Consolida: object_pool.py, smart_cache.py, weak_ref_managers.py
 """
-from typing import Any, Callable, Optional, Dict, TypeVar, Generic
-from functools import wraps
+from typing import Generic, TypeVar, Callable, Optional, Dict, Any
 import threading
+from queue import Queue, Empty
+from functools import wraps
 import time
 from collections import OrderedDict
 import hashlib
 import pickle
 import sys
+import weakref
+
+
+# ============================================================================
+# OBJECT POOL (de object_pool.py)
+# ============================================================================
 
 T = TypeVar('T')
 
+class ObjectPool(Generic[T]):
+    """Pool genérico de objetos reutilizables, thread-safe y con re-inicialización."""
+    
+    def __init__(
+        self,
+        factory: Callable[[], T],
+        reset: Optional[Callable[[T], None]] = None,
+        reinit: Optional[Callable[..., None]] = None,
+        max_size: int = 100,
+        prealloc: int = 10
+    ) -> None:
+        self._factory = factory
+        self._reset = reset or (lambda x: None)
+        self._reinit = reinit
+        self._max_size = max_size
+        self._pool: Queue[T] = Queue(maxsize=max_size)
+        self._lock = threading.Lock()
+        self._created = 0
+        
+        for _ in range(prealloc):
+            self._pool.put(self._factory())
+            self._created += 1
+    
+    def acquire(self, *args, **kwargs) -> T:
+        """Adquiere un objeto del pool y lo re-inicializa."""
+        try:
+            obj = self._pool.get_nowait()
+        except Empty:
+            with self._lock:
+                if self._created < self._max_size:
+                    obj = self._factory()
+                    self._created += 1
+                else:
+                    obj = self._pool.get()
+        
+        if self._reinit:
+            self._reinit(obj, *args, **kwargs)
+            
+        return obj
+    
+    def release(self, obj: T) -> None:
+        """Devuelve un objeto al pool, reseteando su estado."""
+        self._reset(obj)
+        try:
+            self._pool.put_nowait(obj)
+        except:
+            # Pool lleno, el objeto será descartado y recolectado por el GC
+            pass
+
+
+# Importación tardía para evitar dependencia circular
+class EventoAvanzadoPool:
+    """Pool de objetos EventoAvanzado para optimizar la creación de eventos."""
+    
+    _pool: Optional[ObjectPool] = None
+    
+    @classmethod
+    def initialize(cls) -> None:
+        """Inicializa el pool de eventos."""
+        if cls._pool is None:
+            from core_events import EventoAvanzado
+            
+            def factory():
+                return EventoAvanzado.__new__(EventoAvanzado)
+            
+            def reset(evento):
+                evento.procesado = False
+                if hasattr(evento, 'respuestas'):
+                    evento.respuestas.clear()
+                if hasattr(evento, 'contexto'):
+                    evento.contexto.clear()
+            
+            cls._pool = ObjectPool(
+                factory=factory,
+                reset=reset,
+                reinit=EventoAvanzado.__init__,
+                max_size=500,
+                prealloc=50
+            )
+    
+    @classmethod
+    def create(cls, *args, **kwargs):
+        """Obtiene un evento del pool y lo inicializa."""
+        if cls._pool is None:
+            cls.initialize()
+        return cls._pool.acquire(*args, **kwargs)
+    
+    @classmethod
+    def recycle(cls, evento) -> None:
+        """Devuelve un evento al pool."""
+        if cls._pool:
+            cls._pool.release(evento)
+
+
+# ============================================================================
+# SMART CACHE (de smart_cache.py)
+# ============================================================================
 
 class CacheEntry(Generic[T]):
     """Entrada de caché con TTL y metadata."""
@@ -37,7 +142,6 @@ class CacheEntry(Generic[T]):
         try:
             return len(pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL))
         except (pickle.PicklingError, TypeError):
-            # Si no es serializable, no podemos estimar bien, retornamos un tamaño base
             return sys.getsizeof(obj)
     
     def is_expired(self) -> bool:
@@ -129,7 +233,6 @@ class LRUCache:
         if not self._cache:
             return
         
-        # LIFO: eliminar el primero (menos reciente)
         key, _ = self._cache.popitem(last=False)
         self._evictions += 1
     
@@ -167,14 +270,7 @@ def cached(
     ttl: Optional[float] = None,
     key_func: Optional[Callable] = None
 ) -> Callable:
-    """
-    Decorador para cachear resultados de funciones.
-    
-    Args:
-        cache: Instancia de LRUCache (usa global si None)
-        ttl: Tiempo de vida en segundos
-        key_func: Función para generar clave del caché
-    """
+    """Decorador para cachear resultados de funciones."""
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -182,7 +278,6 @@ def cached(
             if key_func:
                 cache_key = key_func(*args, **kwargs)
             else:
-                # Clave por defecto: hash de args y kwargs
                 key_data = f"{func.__name__}:{args}:{sorted(kwargs.items())}"
                 cache_key = hashlib.md5(key_data.encode()).hexdigest()
             
@@ -208,3 +303,53 @@ def cached(
 
 # Caché global
 _global_cache = LRUCache(max_size=2000, max_memory_mb=200, default_ttl=30.0)
+
+
+# ============================================================================
+# WEAK REFERENCE MANAGERS (de weak_ref_managers.py)
+# ============================================================================
+
+class GestorRegistry:
+    """Registro de gestores con weak references."""
+    
+    _instance: Optional['GestorRegistry'] = None
+    
+    def __new__(cls) -> 'GestorRegistry':
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+    
+    def __init__(self) -> None:
+        if self._initialized:
+            return
+        
+        self._gestores: Dict[str, weakref.ref] = {}
+        self._initialized = True
+    
+    def register(self, nombre: str, gestor: Any) -> None:
+        """Registra un gestor con weak reference."""
+        self._gestores[nombre] = weakref.ref(gestor)
+    
+    def get(self, nombre: str) -> Optional[Any]:
+        """Obtiene un gestor del registro."""
+        ref = self._gestores.get(nombre)
+        if ref is None:
+            return None
+        
+        gestor = ref()
+        if gestor is None:
+            # Gestor fue garbage collected
+            del self._gestores[nombre]
+            return None
+        
+        return gestor
+    
+    def cleanup(self) -> None:
+        """Limpia referencias muertas."""
+        dead_keys = [
+            key for key, ref in self._gestores.items()
+            if ref() is None
+        ]
+        for key in dead_keys:
+            del self._gestores[key]

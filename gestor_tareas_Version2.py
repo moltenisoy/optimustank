@@ -4,7 +4,7 @@ Gestor avanzado de tareas con scheduling inteligente, queue management prioritar
 recuperación automática y ejecución paralela optimizada.
 """
 from base_gestor_Version2 import BaseGestor
-from dynamic_thread_pool import DynamicThreadPool
+from platform_threading import DynamicThreadPool
 import os
 import subprocess
 import threading
