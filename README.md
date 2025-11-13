@@ -16,19 +16,23 @@
 ### Prerequisites
 
 *   Python 3.8 or higher
-*   Required Python packages (see `requirements.txt`)
+*   Required Python packages:
+    - psutil (system monitoring)
+    - pydantic (configuration validation)
+    - watchdog (file system monitoring)
+    - Additional packages may be needed for specific features
 
 ### Installation
 
 1.  **Clone the repository**:
     ```bash
-    git clone https://github.com/your-username/OPTIMUSTANK.git
-    cd OPTIMUSTANK
+    git clone https://github.com/moltenisoy/optimustank.git
+    cd optimustank
     ```
 
 2.  **Install dependencies**:
     ```bash
-    pip install -r requirements.txt
+    pip install psutil pydantic watchdog
     ```
 
 ### Running the Application
@@ -50,6 +54,21 @@ python tests.py
 ## 🤝 Contributing
 
 Contributions are welcome! If you have any ideas, suggestions, or bug reports, please open an issue or submit a pull request.
+
+## 📚 Documentation
+
+For comprehensive optimization recommendations including basic, deep, kernel, and hardware optimizations, see [RECOMMENDATIONS.md](RECOMMENDATIONS.md).
+
+## 🏗️ Project Structure
+
+The codebase has been refactored into a clean, modular structure:
+
+- **Core modules** (`core_events.py`, `memory_utils.py`, `reliability_utils.py`, `logging_profiling.py`, `platform_threading.py`): Consolidated utility modules
+- **Gestores** (10 manager modules): CPU, Memory, Disk, Network, GPU, Services, Tasks, Kernel, Energy, and Modules management
+- **Base infrastructure**: `base_gestor_Version2.py`, `dependency_container.py`, `main.py`
+- **Testing**: `test_framework.py`, `tests.py`
+
+Total: 21 Python files (consolidated from 30+ original files)
 
 ## 📄 License
 
