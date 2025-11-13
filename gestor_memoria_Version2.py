@@ -4,7 +4,7 @@ Gestor avanzado de memoria con algoritmos adaptativos, predicción y optimizaci�
 Incluye gestión de prioridades de memoria, compresión dinámica y análisis predictivo.
 """
 from base_gestor_Version2 import BaseGestor, Task
-from smart_cache import cached, LRUCache
+from memory_utils import cached, LRUCache
 import psutil
 import ctypes
 import gc

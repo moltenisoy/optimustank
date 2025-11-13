@@ -4,14 +4,14 @@ Gestor avanzado de GPU con soporte NVIDIA, AMD e Intel, optimización dinámica,
 overclocking seguro, undervolting y gestión térmica avanzada.
 """
 from base_gestor_Version2 import BaseGestor
-from circuit_breaker import circuit_breaker
+from reliability_utils import circuit_breaker
 import subprocess
 from typing import Optional, Dict, List
 import re
 import threading
 from collections import deque
 from datetime import timedelta
-from platform_adapter import PlatformAdapterFactory
+from platform_threading import PlatformAdapterFactory
 
 class GestorGPU(BaseGestor):
     def __init__(self):

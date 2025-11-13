@@ -51,7 +51,7 @@ class HardwareMonitor:
 
 from datetime import timedelta
 
-from platform_adapter import PlatformAdapterFactory
+from platform_threading import PlatformAdapterFactory
 
 class GestorEnergia(BaseGestor):
     def __init__(self):
